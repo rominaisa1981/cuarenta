@@ -1,0 +1,4 @@
+res://scenes/Main.tscn
+res://scenes/Card.tscn
+res://scenes/Player.tscn
+res://scripts/Card.gd
