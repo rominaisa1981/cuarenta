@@ -2,6 +2,7 @@ extends Node2D
 
 var numero = 0
 var palo = ""
+var ya_jugada = false
 
 func configurar_carta(nuevo_numero, nuevo_palo):
 	numero = nuevo_numero
@@ -39,3 +40,26 @@ func _input_event(viewport, event, shape_idx):
 	if event is InputEventScreenTouch and event.pressed:
 		print("Tocaste la carta: ", numero, " de ", palo)
 		# Aquí podrías llamar a una función para "jugar" esta carta
+
+func jugar_carta():
+	print("Carta jugada: ", numero, palo)
+
+	ya_jugada = true
+
+	var mesa = get_parent().get_node("Mesa")
+	var destino_global = mesa.global_position
+	
+	var main = get_tree().get_root().get_node("Main")  
+	main.colocar_en_mesa(self)
+	main.turno_cpu()
+	#var tween = create_tween()
+	#tween.tween_property(self, "position", destino_global, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+	# Opcional: agrandar la carta
+	#tween.tween_property(self, "scale", Vector2(2, 2), 0.3)
+
+
+
+func _on_area_2d_input_event(viewport: Node, event: InputEvent, shape_idx: int) -> void:
+	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed and not ya_jugada:		
+		jugar_carta()

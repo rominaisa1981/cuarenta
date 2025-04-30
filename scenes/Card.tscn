@@ -1,8 +1,18 @@
-[gd_scene load_steps=2 format=3 uid="uid://crw7a534e4qu7"]
+[gd_scene load_steps=3 format=3 uid="uid://crw7a534e4qu7"]
 
 [ext_resource type="Script" uid="uid://c2xl3l7lyqg08" path="res://scripts/Card.gd" id="1_yiag5"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_yiag5"]
+size = Vector2(80, 100)
 
 [node name="Card" type="Node2D"]
 script = ExtResource("1_yiag5")
 
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+shape = SubResource("RectangleShape2D_yiag5")
+
 [node name="Sprite2D" type="Sprite2D" parent="."]
+
+[connection signal="input_event" from="Area2D" to="." method="_on_area_2d_input_event"]
