@@ -17,10 +17,14 @@ func _ready():
 func repartir_mano_cpu(cantidad: int):
 	var escala = 1.5
 	var ancho_real = 80 * escala
-	var separacion = 12
-	var ancho_total = cantidad * ancho_real + (cantidad - 1) * separacion
+	var separacion = 10
+	var ancho_total = (cantidad * ancho_real) + ((cantidad - 1) * separacion)
 
 	var screen_width = get_viewport_rect().size.x
+	var screen_height = get_viewport_rect().size.y
+	
+	
+	
 	var inicio_x = (screen_width - ancho_total) / 2.0
 	var y = 100  # Altura fija arriba
 
@@ -30,7 +34,7 @@ func repartir_mano_cpu(cantidad: int):
 		carta.configurar_carta(carta_info["numero"], carta_info["palo"])
 		carta.scale = Vector2(escala, escala)
 
-		var x = inicio_x + i * (ancho_real + separacion)
+		var x = inicio_x + i * (ancho_real + separacion) + ancho_real / 2.0
 		carta.position = Vector2(x, y)
 
 		# 👇 Si quieres simular cartas boca abajo (opcional)
