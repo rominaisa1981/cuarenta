@@ -5,10 +5,13 @@ var palo = ""
 var ya_jugada = false
 var seleccionada = false
 signal carta_seleccionada(carta)
+var es_mesa = false
+var main = null  # Referencia a Main
 
 func configurar_carta(nuevo_numero, nuevo_palo):
 	numero = nuevo_numero
 	palo = nuevo_palo
+
 	actualizar_sprite()
 
 func mostrar_dorso():
@@ -42,16 +45,18 @@ func actualizar_sprite():
 	else:
 		print("No se encontró la imagen de la carta: ", ruta)
 
-func _input_event(viewport, event, shape_idx): 
-	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
-		print("Tocaste la carta: ", numero, " de ", palo)
-		# Aquí podrías llamar a una función para "jugar" esta carta
-		toggle_seleccion()
 
 func toggle_seleccion():
 	emit_signal("carta_seleccionada", self)
 
-
+func toggle_seleccion_mesa():
+	if self in main.seleccion_mesa:
+		main.seleccion_mesa.erase(self)
+		position.y += 20  # Baja visualmente (desmarca)
+	else:
+		main.seleccion_mesa.append(self)
+		position.y -= 20  # Sube visualmente (marca)
+		
 func jugar_carta():
 	print("Carta jugada: ", numero, palo)
 
@@ -73,5 +78,10 @@ func jugar_carta():
 
 func _on_area_2d_input_event(viewport: Node, event: InputEvent, shape_idx: int) -> void:
 	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed and not ya_jugada:		
-		toggle_seleccion()
+		
 		#jugar_carta()
+		print(get_parent().name)
+		if es_mesa:  # Solo si está en la mesa
+			toggle_seleccion_mesa()
+		else : 
+			toggle_seleccion()
