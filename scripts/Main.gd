@@ -17,12 +17,33 @@ var turno_actual = Turno.JUGADOR
 
 var seleccion_mesa: Array = []
 
+const PlayerScript = preload("res://scripts/Player.gd")
+var jugador: PlayerScript
+var cpu: PlayerScript
+
+var ultima_carta_jugada_en_mesa = null # Para la regla de "Caída"
+
+const SECUENCIA_VALIDA = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12] # AS, 2-7, J, Q, K
+
 
 func _ready():
+	turno_actual = [Turno.JUGADOR, Turno.CPU].pick_random()
+	if turno_actual == Turno.CPU:
+		turno_cpu()
+	
+	jugador = PlayerScript.new("Jugador")
+	cpu = PlayerScript.new("CPU")
+
 	add_child(deck)
 	repartir_cartas_jugador(5)
 	repartir_mano_cpu(5)
+	actualizar_hud()
+	
 
+func actualizar_hud():
+	$HUD/ScorePlayerLabel.text = "Puntos: " + str(jugador.puntaje)
+	$HUD/ScoreCPULabel.text = "Puntos: " + str(cpu.puntaje)
+	
 func _process(delta):
 	$"Jugar Carta".disabled = carta_seleccionada == null or turno_actual != Turno.JUGADOR
 	if turno_actual == Turno.JUGADOR:
@@ -95,35 +116,161 @@ func colocar_en_mesa(carta: Node2D):
 	# Redimensionar si deseas
 	#tween.tween_property(carta, "scale", Vector2(2, 2), 0.3)
 
+
 func turno_cpu():
 	
-	await get_tree().create_timer(1.2).timeout
-	
-	if mano_cpu.size() == 0:
+	$"Jugar Carta".disabled = true
+	for carta in mano_jugador:
+		carta.get_node("Area2D").input_pickable = false # Desactiva clics en las cartas
+		
+	await get_tree().create_timer(1.0).timeout
+	if mano_cpu.is_empty():
+		turno_actual = Turno.JUGADOR
 		return
 
-	var carta = mano_cpu.pop_front()
+	print("CPU está pensando...")
+	var jugada = _cpu_encontrar_mejor_jugada()
+
+	if jugada.carta == null:
+		print("CPU no tiene cartas para jugar.")
+		turno_actual = Turno.JUGADOR
+		return
+
+	var carta_a_jugar = jugada.carta
+	var captura_a_realizar = jugada.captura
 	
-	# ✅ Mostrar cara de la carta
-	carta.actualizar_sprite()
-
-	# ✅ Crear tween para efecto de agrandar
-	var tween = carta.create_tween()
-	tween.tween_property(carta, "scale", Vector2(2, 2), 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tween.tween_property(carta, "scale", Vector2(1.5, 1.5), 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-
-	# ✅ Esperar a que termine la animación
+	# Simular que la CPU levanta la carta
+	mano_cpu.erase(carta_a_jugar)
+	
+	# --- LÍNEA CORREGIDA ---
+	# Usamos actualizar_sprite() para mostrar la cara de la carta.
+	carta_a_jugar.actualizar_sprite()
+	
+	var tween = carta_a_jugar.create_tween()
+	tween.tween_property(carta_a_jugar, "scale", carta_a_jugar.scale * 1.2, 0.3)
 	await tween.finished
-
-	# ✅ Esperar 2 segundos más antes de lanzarla a la mesa
-	await get_tree().create_timer(1.0).timeout
-
-	# ✅ Enviar la carta a la mesa
-	colocar_en_mesa(carta)
 	
-	# Fin del turno CPU → vuelve al jugador
-	turno_actual = Turno.JUGADOR
+	if not captura_a_realizar.is_empty():
+		print("CPU juega ", carta_a_jugar.numero, " y captura ", captura_a_realizar.size(), " cartas.")
+		
+		var datos_cartas_capturadas = []
+		for c in [carta_a_jugar] + captura_a_realizar:
+			datos_cartas_capturadas.append({"numero": c.numero, "palo": c.palo})
 
+		cpu.agregar_capturadas(datos_cartas_capturadas)
+		
+		for c in captura_a_realizar:
+			mesa_cartas.erase(c)
+			c.queue_free()
+		carta_a_jugar.queue_free()
+		_actualizar_vistas_capturadas()
+	else:
+		print("CPU descarta ", carta_a_jugar.numero)
+		colocar_en_mesa(carta_a_jugar)
+		ultima_carta_jugada_en_mesa = carta_a_jugar
+
+	actualizar_hud()
+	_revisar_ganador()
+	_revisar_fin_de_mano()
+	
+	 # Reactivar controles al final
+	for carta in mano_jugador:
+		carta.get_node("Area2D").input_pickable = true
+	turno_actual = Turno.JUGADOR
+	
+	turno_actual = Turno.JUGADOR
+	print("Turno del Jugador.")
+	
+	
+#func turno_cpu():
+	#
+	#await get_tree().create_timer(1.2).timeout
+	#
+	#if mano_cpu.size() == 0:
+		#return
+#
+	#var carta = mano_cpu.pop_front()
+	#
+	## ✅ Mostrar cara de la carta
+	#carta.actualizar_sprite()
+#
+	## ✅ Crear tween para efecto de agrandar
+	#var tween = carta.create_tween()
+	#tween.tween_property(carta, "scale", Vector2(2, 2), 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	#tween.tween_property(carta, "scale", Vector2(1.5, 1.5), 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+#
+	## ✅ Esperar a que termine la animación
+	#await tween.finished
+#
+	## ✅ Esperar 2 segundos más antes de lanzarla a la mesa
+	#await get_tree().create_timer(1.0).timeout
+#
+	## ✅ Enviar la carta a la mesa
+	#colocar_en_mesa(carta)
+	#
+	## Fin del turno CPU → vuelve al jugador
+	#turno_actual = Turno.JUGADOR
+
+# Esta función borra las pilas actuales y las vuelve a dibujar con los datos actualizados
+func _actualizar_vistas_capturadas():
+	# Definimos los contenedores y los datos de cada jugador
+	var vistas = [
+		{ "container": $HUD/CapturadasJugador, "datos": jugador.cartas_capturadas },
+		{ "container": $HUD/CapturadasCPU, "datos": cpu.cartas_capturadas }
+	]
+
+	for vista in vistas:
+		var container = vista.container
+		var datos_cartas = vista.datos
+
+		# 1. Limpiamos las cartas que se mostraban antes
+		for child in container.get_children():
+			child.queue_free()
+
+		# 2. Creamos las nuevas imágenes de las cartas capturadas
+		var offset = Vector2(25, 0) # Pequeño desplazamiento para el efecto de pila
+		for i in range(datos_cartas.size()):
+			var datos_carta = datos_cartas[i]
+			var carta_visual = card_scene.instantiate()
+
+			carta_visual.configurar_carta(datos_carta.numero, datos_carta.palo)
+			carta_visual.scale = Vector2(0.8, 0.8) # Las hacemos un poco más pequeñas
+			carta_visual.position = i * offset # Apilamos con desplazamiento
+			carta_visual.z_index = i # Asegura que se apilen en orden
+
+			container.add_child(carta_visual)
+			
+func _terminar_partida():
+	# --- Lógica del "Cartón" (puntuación final por cartas capturadas) ---
+	var total_jugador = jugador.cartas_capturadas.size()
+	var total_cpu = cpu.cartas_capturadas.size()
+
+	print("Puntuación del Cartón: Jugador [", total_jugador, "] vs CPU [", total_cpu, "]")
+
+	if total_jugador > total_cpu:
+		jugador.sumar_puntos(2) # En el juego real, las reglas varían, esto es un ejemplo.
+	elif total_cpu > total_jugador:
+		cpu.sumar_puntos(2)
+	# En caso de empate, usualmente gana la "mano" o se dan puntos. Por ahora lo dejamos así.
+
+	actualizar_hud()
+
+	# --- Mostrar pantalla de fin de partida ---
+	_revisar_ganador()
+
+
+func _revisar_ganador():
+	var ganador = ""
+	if jugador.puntaje >= 40:
+		ganador = "¡Ganaste la partida!"
+	elif cpu.puntaje >= 40:
+		ganador = "La CPU ha ganado la partida."
+
+	if ganador != "":
+		$HUD/PanelFinPartida/TituloLabel.text = "Fin del Juego"
+		$HUD/PanelFinPartida/ResultadoLabel.text = ganador
+		$HUD/PanelFinPartida.visible = true
+		
 func repartir_cartas_jugador(cantidad: int):
 	var escala = 1.5
 	var ancho_real = 80 * escala
@@ -157,6 +304,10 @@ func repartir_cartas_jugador(cantidad: int):
 
 		add_child(carta)
 		mano_jugador.append(carta)
+	var tipo_ronda = _revisar_ronda(mano_jugador)
+	if tipo_ronda != "":
+		$HUD/RondaButton.visible = true
+		$HUD/RondaButton.set_meta("tipo", tipo_ronda) # Guardamos qué tipo es
 
 
 
@@ -197,25 +348,23 @@ func jugar_carta():
 	tween.tween_property(self, "scale", Vector2(2, 2), 0.3)
 	
 func _on_carta_seleccionada(carta):
+	# Si se hace clic en la carta que ya estaba seleccionada, se deselecciona.
 	if carta_seleccionada == carta:
-		# Si es la misma carta → deseleccionar (bajar)
-		var tween = carta.create_tween()
-		tween.tween_property(carta, "position:y", carta.position.y + 30, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		carta.deseleccionar_visualmente()
 		carta_seleccionada = null
-		carta.seleccionada = false
 		return
 
+	# ✅ ESTA ES LA PARTE CLAVE QUE AÑADIMOS
+	# Si ya había otra carta seleccionada, la bajamos visualmente.
 	if carta_seleccionada != null:
-		# Bajar la anterior
-		var tween = carta_seleccionada.create_tween()
-		tween.tween_property(carta_seleccionada, "position:y", carta_seleccionada.position.y + 30, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		carta_seleccionada.seleccionada = false
+		carta_seleccionada.deseleccionar_visualmente()
 
-	# Subir la nueva carta
+	# Ahora, seleccionamos la nueva carta, subiéndola visualmente.
 	var tween = carta.create_tween()
 	tween.tween_property(carta, "position:y", carta.position.y - 30, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	carta.seleccionada = true
 
+	# Finalmente, guardamos la referencia a la nueva carta seleccionada.
 	carta_seleccionada = carta
 
 
@@ -224,53 +373,225 @@ func _on_button_pressed() -> void:
 		print("No hay carta seleccionada.")
 		return
 
-	# ✅ Animar la carta seleccionada hacia la mesa
 	var carta = carta_seleccionada
+	var es_captura_valida = validar_captura(carta, seleccion_mesa)
 
-	# Ya no está seleccionada
-	carta.seleccionada = false
-	carta_seleccionada = null
+	# --- Lógica de "Caída" ---
+	if ultima_carta_jugada_en_mesa != null and ultima_carta_jugada_en_mesa.numero == carta.numero:
+		print("¡CAÍDA!")
+		await mostrar_mensaje_evento("¡CAÍDA!")
+		jugador.sumar_puntos(2)
+		# En una caída, te llevas la carta que provocó la caída.
+		seleccion_mesa.append(ultima_carta_jugada_en_mesa)
+		es_captura_valida = true # Una caída siempre es una captura válida
 
-	# Bajar la carta visualmente (si está levantada)
-	var tween_bajar = carta.create_tween()
-	tween_bajar.tween_property(carta, "position:y", carta.position.y + 30, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-
-	# Esperar que baje
-	await tween_bajar.finished
+	# --- Procesar el resultado de la jugada ---
+	if es_captura_valida:
+		print("Captura exitosa!")
+		var datos_cartas_capturadas = []
+		for c in [carta] + seleccion_mesa:
+			datos_cartas_capturadas.append({"numero": c.numero, "palo": c.palo})
 	
-	
-	# Verificar si es captura válida
-	if validar_captura(carta, seleccion_mesa):
-		# ✅ Captura válida → eliminar todas las seleccionadas + la carta jugada
+		jugador.agregar_capturadas(datos_cartas_capturadas)
+		
+		# Eliminar las cartas de la pantalla
 		for c in seleccion_mesa:
 			mesa_cartas.erase(c)
 			c.queue_free()
-
-		carta.queue_free()  # la carta jugada también se va porque se captura
-
+		
+		mano_jugador.erase(carta)
+		carta.queue_free()
+		
+		# --- Lógica de "Limpia" ---
+		if mesa_cartas.is_empty():
+			print("¡LIMPIA!")
+			await mostrar_mensaje_evento("¡LIMPIA!")
+			jugador.sumar_puntos(2)
+		_actualizar_vistas_capturadas()		
 	else:
-		# ❌ No válida → colocar en la mesa
-		await colocar_en_mesa(carta)
+		print("Jugada no válida o descarte. Colocando carta en la mesa.")
+		# Si no es una captura válida, la carta se va a la mesa
+		mano_jugador.erase(carta)
+		colocar_en_mesa(carta)
+		ultima_carta_jugada_en_mesa = carta # Actualizamos la última carta en mesa para la "caída"
 
-	# Limpiar selección de la mesa
+	# --- Limpieza y cambio de turno ---
+	for c in seleccion_mesa: # Deselecciona visualmente lo que quedara
+		c.deseleccionar_visualmente()
 	seleccion_mesa.clear()
-
-
-	# Cambiar turno a CPU
+	
+	carta_seleccionada = null
+	actualizar_hud()
+	_revisar_ganador()
+	
+	_revisar_fin_de_mano()
+	
 	turno_actual = Turno.CPU
-
-	# Llamar turno del CPU
 	turno_cpu()
 
-func validar_captura(carta_jugada, cartas_seleccionadas): 
-	if cartas_seleccionadas.size() == 0:
+
+
+
+# Devuelve un array con todos los subconjuntos/combinaciones posibles de un array dado
+func _generar_combinaciones(array: Array) -> Array:
+	var resultados = [[]]
+	for elemento in array:
+		var nuevos_subconjuntos = []
+		for subconjunto in resultados:
+			nuevos_subconjuntos.append(subconjunto + [elemento])
+		resultados.append_array(nuevos_subconjuntos)
+	resultados.pop_front() # Eliminamos el primer resultado que es un array vacío []
+	return resultados
+	
+
+func _cpu_encontrar_mejor_jugada():
+	var mejor_jugada = {
+		"carta": null,
+		"captura": [],
+		"valor": -1
+	}
+
+	var combinaciones_mesa = _generar_combinaciones(mesa_cartas)
+
+	# 1. Iterar sobre cada carta en la mano de la CPU
+	for carta_cpu in mano_cpu:
+		# 2. Iterar sobre cada combinación posible de cartas en la mesa
+		for combinacion in combinaciones_mesa:
+			if validar_captura(carta_cpu, combinacion):
+				# Esta es una jugada válida, ahora calculamos su valor
+				var valor_actual = combinacion.size() # Valor base: 1 punto por carta
+				if combinacion.size() == mesa_cartas.size():
+					valor_actual += 10 # Bonus por "Limpia"
+
+				# Si esta jugada es mejor que la que teníamos, la guardamos
+				if valor_actual > mejor_jugada.valor:
+					mejor_jugada.valor = valor_actual
+					mejor_jugada.carta = carta_cpu
+					mejor_jugada.captura = combinacion
+
+	# 3. Si no se encontró ninguna jugada de captura
+	if mejor_jugada.carta == null and not mano_cpu.is_empty():
+		# Descartar la carta de menor valor
+		var carta_mas_baja = mano_cpu[0]
+		for carta in mano_cpu:
+			if carta.numero < carta_mas_baja.numero:
+				carta_mas_baja = carta
+		mejor_jugada.carta = carta_mas_baja
+
+	return mejor_jugada
+
+func _revisar_fin_de_mano():
+	# Si ambos jugadores ya no tienen cartas en la mano...
+	if mano_jugador.is_empty() and mano_cpu.is_empty():
+		print("--- Fin de la mano ---")
+		await get_tree().create_timer(1.5).timeout # Pausa para que se vea la mesa vacía
+
+		# Verificamos si aún quedan cartas en el mazo
+		if not deck.mazo.is_empty():
+			print("Repartiendo nueva mano...")
+			repartir_cartas_jugador(5)
+			repartir_mano_cpu(5)
+			# Aquí llamaremos a la revisión de "Ronda" en el siguiente paso
+		else:
+			print("El mazo está vacío. Fin de la partida.")
+			_terminar_partida()
+			
+func validar_captura(carta_jugada, cartas_seleccionadas):
+	if cartas_seleccionadas.is_empty():
 		return false
 
+	# --- Regla 1: Captura por Par ---
 	if cartas_seleccionadas.size() == 1:
-		return cartas_seleccionadas[0].numero == carta_jugada.numero
+		if cartas_seleccionadas[0].numero == carta_jugada.numero:
+			print("Validación: Es un PAR.")
+			return true
 
-	var suma = 0
-	for c in cartas_seleccionadas:
-		suma += c.numero
+	# --- Regla 2: Captura por Suma ---
+	if carta_jugada.numero <= 7:
+		var suma = 0
+		var todas_son_numeros_bajos = true
+		for carta_en_mesa in cartas_seleccionadas:
+			if carta_en_mesa.numero >= 10:
+				todas_son_numeros_bajos = false
+				break
+			suma += carta_en_mesa.numero
+		
+		if todas_son_numeros_bajos and suma == carta_jugada.numero:
+			print("Validación: Es una SUMA.")
+			return true
 
-	return suma == carta_jugada.numero
+	# --- Regla 3: Captura por Escalera ---
+	# ✅ CORRECCIÓN: Toda la lógica de la escalera ahora está dentro de una condición.
+	# Solo intentaremos validar una escalera si la carta base está en la mesa.
+	var base_en_mesa = false
+	for carta_en_mesa in cartas_seleccionadas:
+		if carta_en_mesa.numero == carta_jugada.numero:
+			base_en_mesa = true
+			break
+	
+	# Si la base está, procedemos a validar la secuencia completa.
+	if base_en_mesa:
+		var unicos = []
+		for carta_en_mesa in cartas_seleccionadas:
+			if not unicos.has(carta_en_mesa.numero):
+				unicos.append(carta_en_mesa.numero)
+		unicos.sort()
+		
+		if unicos[0] != carta_jugada.numero:
+			return false # La escalera debe empezar con la carta jugada
+
+		var indice_inicio = SECUENCIA_VALIDA.find(unicos[0])
+		if indice_inicio == -1:
+			return false
+			
+		for i in range(unicos.size()):
+			if (indice_inicio + i) >= SECUENCIA_VALIDA.size() or unicos[i] != SECUENCIA_VALIDA[indice_inicio + i]:
+				return false # La secuencia se rompió
+				
+		print("Validación: Es una ESCALERA.")
+		return true # Si pasó todas las pruebas, es una escalera válida
+		
+	# Si no fue ni par, ni suma, ni una escalera válida, entonces no es una captura válida.
+	return false
+
+
+func _revisar_ronda(mano: Array) -> String:
+	var contador = {} # Usaremos un diccionario para contar los números
+	for carta in mano:
+		if contador.has(carta.numero):
+			contador[carta.numero] += 1
+		else:
+			contador[carta.numero] = 1
+
+	for numero in contador:
+		if contador[numero] == 4:
+			return "doble_ronda"
+		if contador[numero] == 3:
+			return "ronda"
+
+	return "" # No hay ni ronda ni doble ronda
+
+func _on_nuevo_juego_button_pressed() -> void:
+	get_tree().reload_current_scene()
+
+
+func mostrar_mensaje_evento(mensaje: String, duracion: float = 1.5):
+	var label = $HUD/EventLabel
+	label.text = mensaje
+	label.visible = true
+	await get_tree().create_timer(duracion).timeout
+	label.visible = false
+
+func _on_ronda_button_pressed() -> void:
+	var tipo_ronda = $HUD/RondaButton.get_meta("tipo")
+	if tipo_ronda == "ronda":
+		jugador.sumar_puntos(2)
+		print("¡Jugador canta RONDA! +2 puntos.")
+		await mostrar_mensaje_evento("¡RONDA!")
+	elif tipo_ronda == "doble_ronda":
+		jugador.sumar_puntos(4)
+		print("¡Jugador canta DOBLE RONDA! +4 puntos.")
+
+	actualizar_hud()
+	_revisar_ganador()
+	$HUD/RondaButton.visible = false # Ocultamos el botón después de usarlo

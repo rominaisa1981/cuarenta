@@ -57,6 +57,12 @@ func toggle_seleccion_mesa():
 		main.seleccion_mesa.append(self)
 		position.y -= 20  # Sube visualmente (marca)
 		
+
+func deseleccionar_visualmente():
+	if seleccionada:
+		position.y += 30
+		seleccionada = false
+		
 func jugar_carta():
 	print("Carta jugada: ", numero, palo)
 
@@ -78,7 +84,7 @@ func jugar_carta():
 
 func _on_area_2d_input_event(viewport: Node, event: InputEvent, shape_idx: int) -> void:
 	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed and not ya_jugada:		
-		
+				
 		#jugar_carta()
 		print(get_parent().name)
 		if es_mesa:  # Solo si está en la mesa

@@ -10,7 +10,7 @@ card_scene = ExtResource("2_rvslj")
 [node name="Jugar Carta" type="Button" parent="."]
 offset_left = 1045.0
 offset_top = 532.0
-offset_right = 1157.0
+offset_right = 1170.0
 offset_bottom = 575.0
 text = "Jugar"
 
@@ -33,4 +33,80 @@ offset_right = 1249.0
 offset_bottom = 101.0
 grow_horizontal = 0
 
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="ScorePlayerLabel" type="Label" parent="HUD"]
+offset_left = 27.0
+offset_top = 608.0
+offset_right = 99.0
+offset_bottom = 631.0
+text = "Puntos: 0"
+
+[node name="ScoreCPULabel" type="Label" parent="HUD"]
+offset_left = 1136.0
+offset_top = 23.0
+offset_right = 1208.0
+offset_bottom = 46.0
+text = "Puntos: 0"
+
+[node name="PanelFinPartida" type="Panel" parent="HUD"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TituloLabel" type="Label" parent="HUD/PanelFinPartida"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+text = "Fin de la Partida"
+
+[node name="ResultadoLabel" type="Label" parent="HUD/PanelFinPartida"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+text = "Ganó el Jugador"
+
+[node name="NuevoJuegoButton" type="Button" parent="HUD/PanelFinPartida"]
+layout_mode = 0
+offset_right = 8.0
+offset_bottom = 8.0
+
+[node name="RondaButton" type="Button" parent="HUD"]
+visible = false
+offset_left = 1045.0
+offset_top = 476.0
+offset_right = 1170.0
+offset_bottom = 523.0
+text = "Cantar Ronda"
+
+[node name="EventLabel" type="Label" parent="HUD"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CapturadasJugador" type="Node2D" parent="HUD"]
+position = Vector2(171, 643)
+
+[node name="CapturadasCPU" type="Node2D" parent="HUD"]
+position = Vector2(174, 73)
+
 [connection signal="pressed" from="Jugar Carta" to="." method="_on_button_pressed"]
+[connection signal="pressed" from="HUD/PanelFinPartida/NuevoJuegoButton" to="." method="_on_nuevo_juego_button_pressed"]
+[connection signal="pressed" from="HUD/RondaButton" to="." method="_on_ronda_button_pressed"]
