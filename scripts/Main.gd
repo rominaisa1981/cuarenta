@@ -12,13 +12,23 @@ var mano_jugador = []
 
 var carta_seleccionada = null
 
+enum Turno { JUGADOR, CPU }
+var turno_actual = Turno.JUGADOR
+
+var seleccion_mesa: Array = []
+
+
 func _ready():
 	add_child(deck)
 	repartir_cartas_jugador(5)
 	repartir_mano_cpu(5)
 
 func _process(delta):
-	$"Jugar Carta".disabled = carta_seleccionada == null
+	$"Jugar Carta".disabled = carta_seleccionada == null or turno_actual != Turno.JUGADOR
+	if turno_actual == Turno.JUGADOR:
+		$LabelTurno.text = "Turno: Jugador"
+	else:
+		$LabelTurno.text = "Turno: CPU"
 	
 func repartir_mano_cpu(cantidad: int):
 	var escala = 1.5
@@ -37,6 +47,7 @@ func repartir_mano_cpu(cantidad: int):
 		var carta_info = deck.mazo.pop_back()
 		var carta = card_scene.instantiate()
 		carta.configurar_carta(carta_info["numero"], carta_info["palo"])
+		carta.main = self
 		carta.mostrar_dorso()
 		carta.scale = Vector2(escala, escala)
 
@@ -65,8 +76,11 @@ func colocar_en_mesa(carta: Node2D):
 	# 👇 Posición horizontal desde el borde izquierdo
 	var destino = mesa.global_position + Vector2(index * offset_x, 0)
 
-	mesa_cartas.append(carta)
-
+	mesa_cartas.append(carta)	
+	carta.es_mesa = true
+	carta.main = self
+	mesa.add_child(carta)
+	
 	carta.z_index = mesa_cartas.size()
 	
 	#carta.rotation_degrees = 0	
@@ -107,6 +121,8 @@ func turno_cpu():
 	# ✅ Enviar la carta a la mesa
 	colocar_en_mesa(carta)
 	
+	# Fin del turno CPU → vuelve al jugador
+	turno_actual = Turno.JUGADOR
 
 func repartir_cartas_jugador(cantidad: int):
 	var escala = 1.5
@@ -123,6 +139,7 @@ func repartir_cartas_jugador(cantidad: int):
 		var carta = card_scene.instantiate()
 		carta.connect("carta_seleccionada", Callable(self, "_on_carta_seleccionada"))
 		carta.configurar_carta(carta_info["numero"], carta_info["palo"])
+		carta.main = self
 		carta.scale = Vector2(escala, escala)
 
 		var x = inicio_x + i * (ancho_real + separacion)+ ancho_real / 2.0
@@ -220,9 +237,40 @@ func _on_button_pressed() -> void:
 
 	# Esperar que baje
 	await tween_bajar.finished
+	
+	
+	# Verificar si es captura válida
+	if validar_captura(carta, seleccion_mesa):
+		# ✅ Captura válida → eliminar todas las seleccionadas + la carta jugada
+		for c in seleccion_mesa:
+			mesa_cartas.erase(c)
+			c.queue_free()
 
-	# Colocar en la mesa
-	await colocar_en_mesa(carta)
+		carta.queue_free()  # la carta jugada también se va porque se captura
 
-	# 🚨 Después de que la carta del jugador llega a la mesa → turno CPU
+	else:
+		# ❌ No válida → colocar en la mesa
+		await colocar_en_mesa(carta)
+
+	# Limpiar selección de la mesa
+	seleccion_mesa.clear()
+
+
+	# Cambiar turno a CPU
+	turno_actual = Turno.CPU
+
+	# Llamar turno del CPU
 	turno_cpu()
+
+func validar_captura(carta_jugada, cartas_seleccionadas): 
+	if cartas_seleccionadas.size() == 0:
+		return false
+
+	if cartas_seleccionadas.size() == 1:
+		return cartas_seleccionadas[0].numero == carta_jugada.numero
+
+	var suma = 0
+	for c in cartas_seleccionadas:
+		suma += c.numero
+
+	return suma == carta_jugada.numero
