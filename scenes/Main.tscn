@@ -42,12 +42,26 @@ offset_right = 99.0
 offset_bottom = 631.0
 text = "Puntos: 0"
 
+[node name="CardsPlayerLabel" type="Label" parent="HUD"]
+offset_left = 112.0
+offset_top = 608.0
+offset_right = 184.0
+offset_bottom = 631.0
+text = "Cartas: 0"
+
 [node name="ScoreCPULabel" type="Label" parent="HUD"]
 offset_left = 1136.0
 offset_top = 23.0
 offset_right = 1208.0
 offset_bottom = 46.0
 text = "Puntos: 0"
+
+[node name="CardsCPULabel" type="Label" parent="HUD"]
+offset_left = 1050.0
+offset_top = 23.0
+offset_right = 1122.0
+offset_bottom = 46.0
+text = "Cartas: 0"
 
 [node name="PanelFinPartida" type="Panel" parent="HUD"]
 visible = false

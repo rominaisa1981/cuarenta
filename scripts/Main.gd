@@ -14,6 +14,7 @@ var carta_seleccionada = null
 
 enum Turno { JUGADOR, CPU }
 var turno_actual = Turno.JUGADOR
+var primer_turno = Turno.JUGADOR
 
 var seleccion_mesa: Array = []
 
@@ -28,6 +29,8 @@ const SECUENCIA_VALIDA = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12] # AS, 2-7, J, Q, K
 
 func _ready():
 	turno_actual = [Turno.JUGADOR, Turno.CPU].pick_random()
+	primer_turno = turno_actual
+	
 	if turno_actual == Turno.CPU:
 		turno_cpu()
 	
@@ -43,6 +46,9 @@ func _ready():
 func actualizar_hud():
 	$HUD/ScorePlayerLabel.text = "Puntos: " + str(jugador.puntaje)
 	$HUD/ScoreCPULabel.text = "Puntos: " + str(cpu.puntaje)
+	
+	$HUD/CardsPlayerLabel.text = "Cartas: " + str(jugador.cartas_capturadas.size())
+	$HUD/CardsCPULabel.text = "Cartas: " + str(cpu.cartas_capturadas.size())
 	
 func _process(delta):
 	$"Jugar Carta".disabled = carta_seleccionada == null or turno_actual != Turno.JUGADOR
@@ -86,43 +92,87 @@ func repartir_mano_cpu(cantidad: int):
 		add_child(carta)  # 👈 Añadimos directamente al nodo principal, NO a ManoCPU
 		mano_cpu.append(carta)
 
-
-
+func _reorganizar_mesa():
+	print("Reorganizando las cartas de la mesa...")
+	var offset_x = 95
+	
+	# Usamos un tween para que la reorganización sea una animación fluida
+	var tween = create_tween()
+	
+	for i in range(mesa_cartas.size()):
+		var carta = mesa_cartas[i]
+		var nueva_posicion = Vector2(i * offset_x, 0)
+		
+		# Si la carta no está ya en su sitio, la movemos
+		if carta.position != nueva_posicion:
+			# Hacemos que la animación de cada carta sea paralela a las demás
+			tween.parallel().tween_property(carta, "position", nueva_posicion, 0.25).set_trans(Tween.TRANS_SINE)
 
 func colocar_en_mesa(carta: Node2D):
 	var mesa = $Mesa
-	var index = mesa_cartas.size()
-	var offset_x = 90  # separación entre cartas
+	
+	# 1. LA FUENTE DE VERDAD: Se calcula el índice basado en las cartas
+	# que REALMENTE existen como hijas del nodo Mesa. Esto evita desincronizaciones.
+	var index = mesa.get_child_count()
+	
+	print("--- Colocando carta en mesa. Índice calculado: ", index)
+	
+	var offset_x = 95  # Aumenté un poco la separación para que se vea mejor
+	
+	# 2. POSICIÓN LOCAL: El destino es un vector local relativo a la posición de 'Mesa'.
+	var destino = Vector2(index * offset_x, 0)
 
-	# 👇 Posición horizontal desde el borde izquierdo
-	var destino = mesa.global_position + Vector2(index * offset_x, 0)
-
-	mesa_cartas.append(carta)	
-	carta.es_mesa = true
-	carta.main = self
+	# 3. REPARENTADO SEGURO: Se quita la carta de su padre anterior (Main)
+	# y se añade al nuevo (Mesa).
+	if carta.get_parent():
+		carta.get_parent().remove_child(carta)
 	mesa.add_child(carta)
 	
-	carta.z_index = mesa_cartas.size()
-	
-	#carta.rotation_degrees = 0	
-	carta.actualizar_sprite()
-	# Mover la carta con animación
+	# 4. ACTUALIZACIÓN DE ESTADO: Actualizamos el array y las propiedades de la carta.
+	mesa_cartas.append(carta)
+	carta.es_mesa = true
+	carta.z_index = index
+
+	# 5. ANIMACIÓN: La animación mueve la posición LOCAL de la carta a su
+	# destino LOCAL dentro de la mesa.
 	var tween = carta.create_tween()
-	tween.tween_property(carta, "position", destino, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	
-	# Girar la carta para que se vea su cara
-	tween.tween_property(carta, "rotation_degrees", 0, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	
-	# Redimensionar si deseas
-	#tween.tween_property(carta, "scale", Vector2(2, 2), 0.3)
+	tween.parallel().tween_property(carta, "scale", Vector2(1.5, 1.5), 0.3).set_trans(Tween.TRANS_SINE)
+	tween.parallel().tween_property(carta, "position", destino, 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.parallel().tween_property(carta, "rotation_degrees", 0, 0.3).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+#func colocar_en_mesa(carta: Node2D):
+	#var mesa = $Mesa
+	#var index = mesa_cartas.size()
+	#var offset_x = 90  # separación entre cartas
+#
+	## 👇 Posición horizontal desde el borde izquierdo
+	#var destino = mesa.global_position + Vector2(index * offset_x, 0)
+#
+	#mesa_cartas.append(carta)	
+	#carta.es_mesa = true
+	#carta.main = self
+	#mesa.add_child(carta)
+	#
+	#carta.z_index = mesa_cartas.size()
+	#
+	##carta.rotation_degrees = 0	
+	#carta.actualizar_sprite()
+	## Mover la carta con animación
+	#var tween = carta.create_tween()
+	#tween.tween_property(carta, "position", destino, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	#
+	## Girar la carta para que se vea su cara
+	#tween.tween_property(carta, "rotation_degrees", 0, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	#
+	## Redimensionar si deseas
+	##tween.tween_property(carta, "scale", Vector2(2, 2), 0.3)
 
 
 func turno_cpu():
-	
 	$"Jugar Carta".disabled = true
 	for carta in mano_jugador:
-		carta.get_node("Area2D").input_pickable = false # Desactiva clics en las cartas
-		
+		carta.get_node("Area2D").input_pickable = false
+
 	await get_tree().create_timer(1.0).timeout
 	if mano_cpu.is_empty():
 		turno_actual = Turno.JUGADOR
@@ -138,18 +188,25 @@ func turno_cpu():
 
 	var carta_a_jugar = jugada.carta
 	var captura_a_realizar = jugada.captura
-	
-	# Simular que la CPU levanta la carta
+
 	mano_cpu.erase(carta_a_jugar)
-	
-	# --- LÍNEA CORREGIDA ---
-	# Usamos actualizar_sprite() para mostrar la cara de la carta.
 	carta_a_jugar.actualizar_sprite()
 	
 	var tween = carta_a_jugar.create_tween()
 	tween.tween_property(carta_a_jugar, "scale", carta_a_jugar.scale * 1.2, 0.3)
 	await tween.finished
 	
+	# --- INICIO DE LA CORRECCIÓN ---
+
+	# 1. Revisar si es "Caída" ANTES de procesar la captura
+	if ultima_carta_jugada_en_mesa != null and is_instance_valid(ultima_carta_jugada_en_mesa) and ultima_carta_jugada_en_mesa.numero == carta_a_jugar.numero:
+		print("¡CAÍDA DE LA CPU!")
+		await mostrar_mensaje_evento("¡CAÍDA CPU!")
+		cpu.sumar_puntos(2)
+		# Si la IA no había incluido la carta de la caída en su captura, la añadimos
+		if not captura_a_realizar.has(ultima_carta_jugada_en_mesa):
+			captura_a_realizar.append(ultima_carta_jugada_en_mesa)
+
 	if not captura_a_realizar.is_empty():
 		print("CPU juega ", carta_a_jugar.numero, " y captura ", captura_a_realizar.size(), " cartas.")
 		
@@ -163,22 +220,31 @@ func turno_cpu():
 			mesa_cartas.erase(c)
 			c.queue_free()
 		carta_a_jugar.queue_free()
+		
+		# 2. Revisar si fue "Limpia" DESPUÉS de quitar las cartas
+		if mesa_cartas.is_empty():
+			print("¡LIMPIA DE LA CPU!")
+			await mostrar_mensaje_evento("¡LIMPIA CPU!")
+			cpu.sumar_puntos(2)
+			
 		_actualizar_vistas_capturadas()
+		_reorganizar_mesa()
+		
 	else:
 		print("CPU descarta ", carta_a_jugar.numero)
 		colocar_en_mesa(carta_a_jugar)
 		ultima_carta_jugada_en_mesa = carta_a_jugar
 
+	# --- FIN DE LA CORRECCIÓN ---
+
 	actualizar_hud()
 	_revisar_ganador()
 	_revisar_fin_de_mano()
 	
-	 # Reactivar controles al final
 	for carta in mano_jugador:
 		carta.get_node("Area2D").input_pickable = true
 	turno_actual = Turno.JUGADOR
 	
-	turno_actual = Turno.JUGADOR
 	print("Turno del Jugador.")
 	
 	
@@ -240,26 +306,70 @@ func _actualizar_vistas_capturadas():
 
 			container.add_child(carta_visual)
 			
+# scripts/Main.gd
+
 func _terminar_partida():
-	# --- Lógica del "Cartón" (puntuación final por cartas capturadas) ---
 	var total_jugador = jugador.cartas_capturadas.size()
 	var total_cpu = cpu.cartas_capturadas.size()
+	
+	var puntos_jugador = 0
+	var puntos_cpu = 0
 
-	print("Puntuación del Cartón: Jugador [", total_jugador, "] vs CPU [", total_cpu, "]")
+	print("--- Fin de la Partida: Puntuación del Cartón (Reglas C++) ---")
+	print("Cartas del Jugador: ", total_jugador)
+	print("Cartas de la CPU: ", total_cpu)
 
+	# --- Regla: Puntuación si se tienen 20 o más cartas ---
+	if total_jugador >= 20:
+		puntos_jugador = 6 + (total_jugador - 20)
+		# Regla: Si el total es impar, se suma un punto extra
+		if total_jugador % 2 != 0:
+			puntos_jugador += 1
+		jugador.sumar_puntos(puntos_jugador)
+		print("Jugador gana cartón: +%d puntos" % puntos_jugador)
+		await mostrar_mensaje_evento("Ganas cartón (+%d Pts)" % puntos_jugador)
+
+	if total_cpu >= 20:
+		puntos_cpu = 6 + (total_cpu - 20)
+		# Regla: Si el total es impar, se suma un punto extra
+		if total_cpu % 2 != 0:
+			puntos_cpu += 1
+		cpu.sumar_puntos(puntos_cpu)
+		print("CPU gana cartón: +%d puntos" % puntos_cpu)
+		await mostrar_mensaje_evento("CPU gana cartón (+%d Pts)" % puntos_cpu)
+	
+	# --- Regla: Empate con menos de 20 cartas ---
+	if total_jugador == total_cpu and total_jugador < 20:
+		print("Empate en cartas. Gana el que no fue primer turno.")
+		# Se dan 2 puntos al jugador que NO inició la ronda
+		if primer_turno == Turno.JUGADOR:
+			cpu.sumar_puntos(2)
+			await mostrar_mensaje_evento("CPU gana por empate (+2 Pts)")
+		else:
+			jugador.sumar_puntos(2)
+			await mostrar_mensaje_evento("Ganas por empate (+2 Pts)")
+	
 	if total_jugador > total_cpu:
-		jugador.sumar_puntos(2) # En el juego real, las reglas varían, esto es un ejemplo.
+		jugador.sumar_puntos(2)
+		await mostrar_mensaje_evento("Ganas el cartón (+2 Pts)")
 	elif total_cpu > total_jugador:
 		cpu.sumar_puntos(2)
-	# En caso de empate, usualmente gana la "mano" o se dan puntos. Por ahora lo dejamos así.
+		await mostrar_mensaje_evento("CPU gana el cartón (+2 Pts)")
+	
+	# Pequeña pausa para que se lean los mensajes
+	await get_tree().create_timer(1.5).timeout
 
+	# Actualizar el marcador y mostrar la pantalla final
 	actualizar_hud()
+	# Después de sumar puntos del cartón, revisamos si alguien ganó EL JUEGO
+	if not _revisar_ganador():
+		# Si nadie ha ganado, iniciamos una nueva ronda
+		_iniciar_nueva_ronda()
 
-	# --- Mostrar pantalla de fin de partida ---
-	_revisar_ganador()
 
-
-func _revisar_ganador():
+func _revisar_ganador() -> bool:
+	# Esta función ahora solo comprueba si se cumplió la condición de victoria (>= 40).
+	# Devuelve 'true' si el juego terminó, y 'false' si no.
 	var ganador = ""
 	if jugador.puntaje >= 40:
 		ganador = "¡Ganaste la partida!"
@@ -270,6 +380,9 @@ func _revisar_ganador():
 		$HUD/PanelFinPartida/TituloLabel.text = "Fin del Juego"
 		$HUD/PanelFinPartida/ResultadoLabel.text = ganador
 		$HUD/PanelFinPartida.visible = true
+		return true # El juego ha terminado
+	
+	return false # El juego continúa
 		
 func repartir_cartas_jugador(cantidad: int):
 	var escala = 1.5
@@ -377,24 +490,26 @@ func _on_button_pressed() -> void:
 	var es_captura_valida = validar_captura(carta, seleccion_mesa)
 
 	# --- Lógica de "Caída" ---
-	if ultima_carta_jugada_en_mesa != null and ultima_carta_jugada_en_mesa.numero == carta.numero:
+	if ultima_carta_jugada_en_mesa != null and is_instance_valid(ultima_carta_jugada_en_mesa) and ultima_carta_jugada_en_mesa.numero == carta.numero:
 		print("¡CAÍDA!")
 		await mostrar_mensaje_evento("¡CAÍDA!")
 		jugador.sumar_puntos(2)
-		# En una caída, te llevas la carta que provocó la caída.
-		seleccion_mesa.append(ultima_carta_jugada_en_mesa)
-		es_captura_valida = true # Una caída siempre es una captura válida
+		
+		# ✅ CORRECCIÓN: Solo añadimos la carta si el jugador no la seleccionó manualmente.
+		if not seleccion_mesa.has(ultima_carta_jugada_en_mesa):
+			seleccion_mesa.append(ultima_carta_jugada_en_mesa)
+			
+		es_captura_valida = true
 
 	# --- Procesar el resultado de la jugada ---
 	if es_captura_valida:
+		# (El resto de esta sección queda igual)
 		print("Captura exitosa!")
 		var datos_cartas_capturadas = []
 		for c in [carta] + seleccion_mesa:
 			datos_cartas_capturadas.append({"numero": c.numero, "palo": c.palo})
-	
 		jugador.agregar_capturadas(datos_cartas_capturadas)
-		
-		# Eliminar las cartas de la pantalla
+
 		for c in seleccion_mesa:
 			mesa_cartas.erase(c)
 			c.queue_free()
@@ -402,32 +517,34 @@ func _on_button_pressed() -> void:
 		mano_jugador.erase(carta)
 		carta.queue_free()
 		
-		# --- Lógica de "Limpia" ---
 		if mesa_cartas.is_empty():
-			print("¡LIMPIA!")
 			await mostrar_mensaje_evento("¡LIMPIA!")
 			jugador.sumar_puntos(2)
-		_actualizar_vistas_capturadas()		
+		
+		seleccion_mesa.clear()
+		_actualizar_vistas_capturadas()
+		_reorganizar_mesa()
+		
 	else:
+		# (Esta sección 'else' queda igual)
 		print("Jugada no válida o descarte. Colocando carta en la mesa.")
-		# Si no es una captura válida, la carta se va a la mesa
 		mano_jugador.erase(carta)
 		colocar_en_mesa(carta)
-		ultima_carta_jugada_en_mesa = carta # Actualizamos la última carta en mesa para la "caída"
+		ultima_carta_jugada_en_mesa = carta
+		
+		for c in seleccion_mesa:
+			c.deseleccionar_visualmente()
+		seleccion_mesa.clear()
 
-	# --- Limpieza y cambio de turno ---
-	for c in seleccion_mesa: # Deselecciona visualmente lo que quedara
-		c.deseleccionar_visualmente()
-	seleccion_mesa.clear()
-	
+	# --- Limpieza final y cambio de turno (esto queda igual) ---
 	carta_seleccionada = null
 	actualizar_hud()
 	_revisar_ganador()
-	
 	_revisar_fin_de_mano()
 	
 	turno_actual = Turno.CPU
 	turno_cpu()
+
 
 
 
@@ -595,3 +712,33 @@ func _on_ronda_button_pressed() -> void:
 	actualizar_hud()
 	_revisar_ganador()
 	$HUD/RondaButton.visible = false # Ocultamos el botón después de usarlo
+
+func _iniciar_nueva_ronda():
+	await mostrar_mensaje_evento("INICIANDO NUEVA RONDA", 2.0)
+	
+	# 0. Limpiar las cartas sobrantes de la mesa --- INICIO DE LA CORRECCIÓN ---
+	for carta in mesa_cartas:
+		if is_instance_valid(carta):
+			carta.queue_free() # Elimina el nodo de la carta de la partida
+	mesa_cartas.clear() # Vacía el array que las controlaba
+	
+	# 1. Resetear el estado de los jugadores para la ronda (no el puntaje)
+	jugador.reset_para_nueva_ronda()
+	cpu.reset_para_nueva_ronda()
+	_actualizar_vistas_capturadas() # Limpia visualmente las capturas
+	
+	# 2. Crear y barajar un mazo nuevo
+	deck.crear_mazo()
+	deck.barajar()
+		
+	
+	# 3. Repartir las primeras manos de la nueva ronda
+	repartir_cartas_jugador(5)
+	repartir_mano_cpu(5)
+	actualizar_hud()
+	
+	# 4. Asignar el turno (puedes alternarlo si quieres, por ahora es aleatorio)
+	turno_actual = [Turno.JUGADOR, Turno.CPU].pick_random()
+	primer_turno = turno_actual
+	if turno_actual == Turno.CPU:
+		turno_cpu()

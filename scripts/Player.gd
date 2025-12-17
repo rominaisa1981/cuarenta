@@ -15,6 +15,9 @@ func sumar_puntos(puntos: int):
 func agregar_capturadas(cartas: Array):
 	cartas_capturadas.append_array(cartas)
 
+func reset_para_nueva_ronda():
+	cartas_capturadas.clear()
+
 func reset():
 	puntaje = 0
 	cartas_capturadas.clear()

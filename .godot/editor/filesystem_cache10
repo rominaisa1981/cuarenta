@@ -1,7 +1,7 @@
 ea4bc82a6ad023ab7ee23ee620429895
-::res://::1756220019
+::res://::1757348500
 icon.svg::CompressedTexture2D/CompressedTexture2D::427491083317277217::1745853655::1745854565::1::::<><><>0<>0<>3a3591c49d8c93bb30adf6223fc9e705<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
-README.md::TextFile::-1::1745876132::0::1::::<><><>0<>0<><>::
+README.md::TextFile/TextFile::-1::1745876132::0::1::::<><><>0<>0<><>::
 ::res://assets/::1745853683
 ::res://assets/cartas/::1745854565
 2BRILLO.png::CompressedTexture2D/CompressedTexture2D::7897385292670343663::1745854079::1745854565::1::::<><><>0<>0<>5779e22f91ffdb47ab336a664da19155<>res://.godot/imported/2BRILLO.png-00cb2dd064cd8c1136802427d3294571.ctex::
@@ -64,11 +64,12 @@ QTREBOL.png::CompressedTexture2D/CompressedTexture2D::8448713045555266365::17458
 tablero-40.png::CompressedTexture2D/CompressedTexture2D::482787033786801481::1744640976::1745854565::1::::<><><>0<>0<>af0372507d438265281651b74153cb77<>res://.godot/imported/tablero-40.png-91c91405954b999a0ba13600f594043c.ctex::
 tablero_40_1024x768 - copia.png::CompressedTexture2D/CompressedTexture2D::7824657340706254947::1744662311::1745854565::1::::<><><>0<>0<>345a5efbbb6cd3cc3d647b875f07fc9c<>res://.godot/imported/tablero_40_1024x768 - copia.png-ba78c678990121466d88098abf44e6b1.ctex::
 tablero_40_1024x768.png::CompressedTexture2D/CompressedTexture2D::5871280733167095411::1745504425::1745854565::1::::<><><>0<>0<>5945028aa2ca080be7f1c2dc45a5d4c8<>res://.godot/imported/tablero_40_1024x768.png-c9357cbcc6151d2c8ffa52cace57519b.ctex::
-::res://scenes/::1756219611
-Card.tscn::PackedScene::6013412583869754192::1756219453::0::1::::<><><>0<>0<><>::uid://c2xl3l7lyqg08::::res://scripts/Card.gd
-Main.tscn::PackedScene::1863168341561340156::1756219611::0::1::::<><><>0<>0<><>::uid://dxgl8ri1s5mjy::::res://scripts/Main.gd<>uid://crw7a534e4qu7::::res://scenes/Card.tscn
-Player.tscn::PackedScene::6504781032080932216::1756219453::0::1::::<><><>0<>0<><>::
-::res://scripts/::1756219611
-Card.gd::GDScript::6716139350829310827::1756219611::0::1::::<>Node2D<><>0<>0<><>::
-Deck.gd::GDScript::3310647009531752241::1745872220::0::1::::<>Node<><>0<>0<><>::
-Main.gd::GDScript::8786719445859655498::1756219611::0::1::::<>Node2D<><>0<>0<><>::
+::res://scenes/::1756404995
+Card.tscn::PackedScene::6013412583869754192::1756404995::0::1::::<><><>0<>0<><>::uid://c2xl3l7lyqg08::::res://scripts/Card.gd
+Main.tscn::PackedScene::1863168341561340156::1756404995::0::1::::<><><>0<>0<><>::uid://dxgl8ri1s5mjy::::res://scripts/Main.gd<>uid://crw7a534e4qu7::::res://scenes/Card.tscn
+Player.tscn::PackedScene::6504781032080932216::1756404995::0::1::::<><><>0<>0<><>::
+::res://scripts/::1756333589
+Card.gd::GDScript/GDScript::6716139350829310827::1756223142::0::1::::<>Node2D<><>0<>0<><>::
+Deck.gd::GDScript/GDScript::3310647009531752241::1745872220::0::1::::<>Node<><>0<>0<><>::
+Main.gd::GDScript/GDScript::8786719445859655498::1756333589::0::1::::<>Node2D<><>0<>0<><>::
+Player.gd::GDScript/GDScript::4162598336212842317::1756220330::0::1::::<>RefCounted<><>0<>0<><>::
